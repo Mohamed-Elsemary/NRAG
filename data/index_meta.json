@@ -1,0 +1,6 @@
+{
+  "hash": "12e7874dde9eec566333fced30bfe3f3",
+  "model": "all-MiniLM-L6-v2",
+  "num_chunks": 114,
+  "embedding_dim": 384
+}
