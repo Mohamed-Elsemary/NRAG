@@ -512,8 +512,152 @@ Grounded Answer
    ▼
 Page Citation
 ```
+# Evaluation
+
+`src/evaluate.py`
+
+The evaluation pipeline contains **8 predefined technical questions** covering different aspects of the Nokia 1830 PSS technical documentation.
+
+Each question is processed through the complete RAG pipeline:
+
+```text
+Question
+   │
+   ▼
+Hybrid Retrieval
+   │
+   ▼
+Top-15 Chunks
+   │
+   ▼
+Gemini
+   │
+   ▼
+Grounded Answer
+   │
+   ▼
+Page Citation
+```
+
+## Questions & Results
+
+### 1. 1830 PSS-8 Shelf Capacity
+
+**Question:**
+
+> How many slots does the 1830 PSS-8 shelf provide, and what is its rack-unit (RU) footprint?
+
+**Answer:**
+
+> The 1830 PSS-8 shelf provides an **8-slot SWDM platform** in a **3-RU footprint**.
+> *(Source: Page 82)*
 
 ---
+
+### 2. 1830 PSS-32 Shelf Capacity
+
+**Question:**
+
+> What rack-unit footprint does the 1830 PSS-32 shelf have, and how many slots does it provide?
+
+**Answer:**
+
+> The 1830 PSS-32 shelf has a **14-RU footprint** and provides a **32-slot core platform**.
+> *(Source: Page 96)*
+
+> The platform consists of 32 paired half-height application cards (or 16 full-height application cards), 2 equipment controllers (EC), 2 redundant power input filters, 1 user panel, and 1 fan unit.
+> *(Source: Pages 96–98)*
+
+---
+
+### 3. Software Load-Lines
+
+**Question:**
+
+> What are the two software load-lines supported by the 1830 PSS system?
+
+**Answer:**
+
+> The two software load-lines supported by the 1830 PSS system are **SWDM software** and **OCS software**.
+> *(Source: Page 47)*
+
+---
+
+### 4. PSS-32 Fan Units
+
+**Question:**
+
+> Which fan units are supported on the 1830 PSS-32 shelf?
+
+**Answer:**
+
+> The fan units supported on the 1830 PSS-32 shelf are **FAN** and **FAN32H**.
+> *(Source: Pages 153–154)*
+
+---
+
+### 5. PSS-16II Fan Units
+
+**Question:**
+
+> Which fan unit(s) are used on the 1830 PSS-16II shelf?
+
+**Answer:**
+
+> The fan units used on the 1830 PSS-16II shelf include:
+>
+> * **16FAN2**
+> * **16FAN2C** (PN 3KC49100AA)
+> * **AB fan tray** (3KC48990AB), which equips the 1830 PSS-16II AB shelf (3KC48960AB)
+>
+> *(Source: Pages 149–150)*
+
+---
+
+### 6. PSS-8 Power Filter Cards
+
+**Question:**
+
+> Name the power filter cards supported on the 1830 PSS-8 shelf.
+
+**Answer:**
+
+> The power filter cards supported on the 1830 PSS-8 shelf are:
+>
+> * **8DC30**
+> * **8DC30T**
+> * **8DC30T2**
+> * **8AC7**
+>
+> *(Source: Pages 158–160)*
+
+---
+
+### 7. PSS-8 Rack Aperture
+
+**Question:**
+
+> What is the required horizontal rack aperture for mounting a 1830 PSS-8 shelf, and which common aperture size is explicitly NOT supported?
+
+**Answer:**
+
+> The required horizontal rack aperture for mounting a 1830 PSS-8 shelf is **450.85 mm (17.75 in)**. Racks with a horizontal aperture of **444.5 mm (17.5 in)** are explicitly **not supported**.
+> *(Source: Pages 82–83)*
+
+---
+
+### 8. PSS-8 Maximum Optical Reach
+
+**Question:**
+
+> What is the maximum optical reach, in kilometers, of the 1830 PSS-8 shelf without amplification?
+
+**Answer:**
+
+> **Not found in the provided document.**
+
+This question also tests the system's **grounding and hallucination prevention** behavior. When the required information is not available in the retrieved context, the generator is expected to return:
+
 
 # Project Structure
 
