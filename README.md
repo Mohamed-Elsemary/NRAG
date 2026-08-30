@@ -1,115 +1,224 @@
 # Nokia 1830 PSS — RAG Pipeline
 
-A **Retrieval-Augmented Generation (RAG)** system built for the Nokia 1830 PSS Technical Description document.  
-The pipeline extracts, chunks, indexes, retrieves, and generates precise answers from the PDF — with full source-page citations.
+# A Retrieval-Augmented Generation (RAG) system built around the Nokia 1830 PSS Technical Description document.
+
+The pipeline extracts and cleans the technical document, creates semantically meaningful chunks, builds a hybrid retrieval index, and uses **Google Gemini** to generate grounded answers with **source-page citations**.
 
 ---
 
-## Architecture Overview
+## Architecture
 
-```
-PDF ──► Chunker ──► Indexer ──► Generator ──► Answer
-                 (extract &    (embed &       (retrieve &    (with page
-                  clean text)   build index)   prompt LLM)    citations)
+```text
+┌─────────────────────┐
+│  Technical PDF      │
+│  Nokia 1830 PSS     │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│      Chunker        │
+│ Extract & clean     │
+│ Detect sections     │
+│ Create metadata     │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│      Indexer        │
+│ Embeddings + TF-IDF │
+│ Hybrid retrieval    │
+│ Metadata filtering  │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│     Generator       │
+│ Retrieve top-k      │
+│ Build context       │
+│ Query Gemini        │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│       Answer        │
+│ Grounded response   │
+│ + page citations    │
+└─────────────────────┘
 ```
 
-| Module | Responsibility |
-|--------|---------------|
-| **`src/chunker.py`** | Extracts pages 47–166 from the PDF, cleans headers/footers/Unicode issues, detects section headings, and splits text into semantically coherent chunks with rich metadata (section hierarchy, page range, shelf tags). |
-| **`src/indexer.py`** | Embeds chunks using `all-MiniLM-L6-v2` (sentence-transformers), builds a hybrid search engine combining dense cosine similarity with TF-IDF keyword scoring and equipment-identifier boosting. Optionally uses FAISS for comparison. |
-| **`src/generator.py`** | Retrieves the top-k chunks for a query via the hybrid indexer, then prompts Google Gemini with a strict system prompt to produce grounded answers with page citations. |
-| **`src/evaluate.py`** | Runs a predefined set of 8 evaluation questions through the full RAG pipeline and prints the answers in a formatted table. |
+### Pipeline Components
+
+| Module             | Responsibility                                                                                                                          |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/chunker.py`   | Extracts pages 47–166, cleans document artifacts, detects section hierarchy, and creates semantically coherent chunks with metadata.    |
+| `src/indexer.py`   | Generates embeddings and implements hybrid retrieval using dense similarity, TF-IDF keyword scoring, and equipment-identifier boosting. |
+| `src/generator.py` | Retrieves relevant chunks and uses Google Gemini to generate grounded answers with page citations.                                      |
+| `src/evaluate.py`  | Runs a predefined evaluation set of 8 technical questions through the complete RAG pipeline.                                            |
 
 ---
 
-## Prerequisites
+## Features
 
-- **Python 3.10+**
-- The source PDF file **`1830_Technical_Description.pdf`** placed inside the `data/` folder.
-- A **Google Gemini API key** (required by the generator and evaluator).
+* PDF extraction using `pypdf`
+* Semantic document chunking with configurable chunk sizes
+* Hierarchical section detection
+* Header/footer and document-artifact removal
+* Unicode and mojibake cleanup
+* Rich chunk metadata (chapter, section, page range, word count, shelf/model tags)
+* Dense semantic retrieval using `all-MiniLM-L6-v2`
+* TF-IDF keyword retrieval and hybrid ranking
+* Equipment identifier boosting (e.g., `FAN32H`, `8DC30`)
+* Metadata filtering and optional FAISS vector search
+* Persistent embeddings with automatic version/hash checking
+* Gemini-powered grounded generation with explicit source-page citations
+* Built-in evaluation pipeline
+
+---
+
+## Requirements
+
+* **Python 3.10+**
+* Nokia 1830 PSS Technical Description PDF
+* Google Gemini API key
+
+The source document should be placed at:
+
+```text
+data/1830_Technical_Description.pdf
+```
 
 ---
 
 ## Installation
 
-1. **Clone / navigate to the project directory:**
+### 1. Clone the repository
 
-   ```bash
-   cd NRAG_venv
-   ```
+```bash
+git clone <your-repository-url>
+cd NRAG_venv
+```
 
-2. **Create and activate a virtual environment** (recommended):
+### 2. Create a virtual environment
 
-   ```bash
-   python -m venv venv
-   source venv/bin/activate        # Linux / macOS
-   venv\Scripts\activate           # Windows
-   ```
+**Windows**
 
-3. **Install all dependencies:**
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+**Linux / macOS**
 
-   This installs:
+```bash
+python -m venv venv
+source venv/bin/activate
+```
 
-   | Package | Purpose |
-   |---------|---------|
-   | `pypdf >= 6.0.0` | PDF text extraction |
-   | `sentence-transformers >= 3.0.0` | Embedding model (`all-MiniLM-L6-v2`) |
-   | `faiss-cpu >= 1.8.0` | Optional FAISS vector search for comparison |
-   | `google-genai >= 1.45.0` | Google Gemini API client |
-   | `python-dotenv >= 1.0.0` | Loads environment variables from `.env` |
+### 3. Install dependencies
 
-4. **Set up your environment variables.**  
-   Create a **`.env`** file in the project root (`NRAG_venv/`) with:
+```bash
+pip install -r requirements.txt
+```
 
-   ```env
-   GEMINI_API_KEY=your_api_key_here
-   GEMINI_MODEL=gemini-3.6-flash     # optional, defaults to gemini-3.6-flash
-   ```
+### Dependencies
+
+| Package                          | Purpose                         |
+| -------------------------------- | ------------------------------- |
+| `pypdf >= 6.0.0`                 | PDF text extraction             |
+| `sentence-transformers >= 3.0.0` | Text embeddings                 |
+| `faiss-cpu >= 1.8.0`             | Optional vector search          |
+| `google-genai >= 1.45.0`         | Google Gemini API               |
+| `python-dotenv >= 1.0.0`         | Environment variable management |
 
 ---
 
-## Usage
+## Configuration
 
-> **Important:** All modules are run as Python packages from the **project root** (`NRAG_venv/`).
+Create a `.env` file in the project root:
 
-### Step 1 — Chunk the PDF
+```env
+GEMINI_API_KEY=your_api_key_here
+GEMINI_MODEL=gemini-3.6-flash
+```
 
-Extracts text from the PDF, detects section boundaries, and produces `data/extracted_chunks.json`.
+`GEMINI_MODEL` is optional and defaults to the configured Gemini model in the generator.
+
+> **Security:** Never commit your `.env` file or API keys to GitHub.
+
+Add the following to `.gitignore`:
+
+```gitignore
+.env
+venv/
+__pycache__/
+*.pyc
+```
 
 ```bash
 python -m src.chunker
 ```
 
-**Output:** `data/extracted_chunks.json` — an array of chunks with metadata (section, parent section, chapter, page range, shelf tags, word count).
+**Output:** `data/extracted_chunks.json` — an array of chunks with metadata (chapter, section, parent section, page range, shelf tags, word count, chunk text).
+
+Each chunk contains metadata such as:
+
+- Chapter
+- Section
+- Parent section
+- Page range
+- Shelf tags
+- Word count
+- Chunk text
 
 ---
 
 ### Step 2 — Build the Vector Index
 
-Embeds all chunks and saves the index to disk. Automatically skips re-embedding if the chunks haven't changed.
+Generate embeddings and build the retrieval index:
 
 ```bash
 python -m src.indexer
 ```
 
-**Output:**
-- `data/embeddings.npy` — the normalized embedding matrix.
-- `data/index_meta.json` — index metadata (hash, model name, dimensions).
+The indexer automatically detects whether existing embeddings are valid and avoids unnecessary re-embedding when the source chunks have not changed.
 
-This also runs a built-in test that searches the index with 8 evaluation questions and prints the top-3 results for each.
+**Output:**
+
+```
+data/embeddings.npy
+data/index_meta.json
+```
+
+The module also runs built-in retrieval tests against the 8 evaluation questions and displays the top retrieved chunks.
 
 ---
 
-### Step 3 — Generate Answers (Interactive)
+## 3. Generate Answers
 
-Runs the full RAG pipeline for a single test question: retrieves relevant chunks and generates an answer via Gemini.
+Run the complete RAG pipeline:
 
 ```bash
 python -m src.generator
+```
+
+The generator:
+
+1. Receives a user question.
+2. Retrieves the most relevant chunks.
+3. Builds a context containing the retrieved text and page metadata.
+4. Sends the context to Google Gemini.
+5. Generates a grounded answer and appends source-page citations.
+
+Example response format:
+
+```text
+The PSS-32 shelf supports ... (Source: Page 83)
+```
+
+If the required information cannot be found:
+
+```text
+Not found in the provided document.
 ```
 
 ---
@@ -145,17 +254,30 @@ NRAG_venv/
 └── README.md                            # This file
 ```
 
+### File Descriptions
+
+| File                    | Description                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------- |
+| `chunker.py`            | PDF extraction, cleaning, section detection, and chunk generation                 |
+| `indexer.py`            | Embedding generation, hybrid retrieval, metadata filtering, and index persistence |
+| `generator.py`          | Retrieval + Gemini-based answer generation                                        |
+| `evaluate.py`           | Automated evaluation over predefined questions                                    |
+| `extracted_chunks.json` | Generated chunk dataset with metadata                                             |
+| `embeddings.npy`        | Persisted normalized embeddings                                                   |
+| `index_meta.json`       | Index version and model metadata                                                  |
+```
+
 ---
 
 ## Pipeline Details
 
 ### Chunker (`src/chunker.py`)
 - Processes pages **47–166** (Chapters 1–2).
-- **Cleans** headers, footers, document IDs, copyright notices, and Unicode mojibake.
-- **Detects** hierarchical section headings (chapter → section → subsection → sub-subsection).
-- **Splits** text at heading boundaries first, then paragraphs, then sentences, with configurable word limits (default: 80–300 words per chunk).
-- **Merges** undersized chunks with neighbors to avoid fragments.
-- **Tags** chunks with Nokia shelf model identifiers (PSS-32, PSS-16II, PSS-8, etc.).
+- Cleans headers, footers, document IDs, copyright notices, and Unicode mojibake.
+- Detects hierarchical section headings (chapter → section → subsection → sub-subsection).
+- Splits text at heading boundaries first, then paragraphs, then sentences, with configurable word limits (default: 80–300 words per chunk).
+- Merges undersized chunks with neighbors to avoid fragments.
+- Tags chunks with Nokia shelf model identifiers (PSS-32, PSS-16II, PSS-8, etc.).
 
 ### Indexer (`src/indexer.py`)
 - Uses **`all-MiniLM-L6-v2`** sentence-transformer for embeddings.
@@ -178,3 +300,33 @@ NRAG_venv/
 - Runs **8 predefined questions** covering shelf specs, fan units, power filters, software load-lines, rack apertures, and optical reach.
 - Prints results in a numbered table format.
 - Includes a 60-second delay between questions for API rate-limit compliance.
+
+---
+
+# Technologies
+
+* **Python**
+* **pypdf**
+* **Sentence Transformers**
+* **FAISS**
+* **NumPy**
+* **Google Gemini**
+* **TF-IDF**
+* **Hybrid Information Retrieval**
+* **Retrieval-Augmented Generation (RAG)**
+
+---
+
+# Key Design Decisions
+
+### Why Hybrid Retrieval?
+
+Pure semantic search is effective for conceptually similar questions, but technical documentation often contains exact identifiers, model numbers, and specifications. Combining semantic similarity, keyword matching, and equipment identifier boosting yields robust retrieval for both conceptual and highly specific technical queries.
+
+### Why Page-Level Metadata?
+
+Keeping page metadata through the pipeline allows final LLM responses to include provenance such as `(Source: Page 124)`, improving traceability.
+
+### Why a Strict Grounding Prompt?
+
+The generator is instructed to use only retrieved context and to return `Not found in the provided document.` when sufficient evidence is unavailable. This prioritizes faithfulness and traceability over speculative answers.
